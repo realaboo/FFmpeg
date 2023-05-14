@@ -31,6 +31,7 @@
 #include "libavutil/pixdesc.h"
 #include "libavutil/stereo3d.h"
 
+#include "libavutil/uuid.h"
 #include "atsc_a53.h"
 #include "avcodec.h"
 #include "dynamic_hdr10_plus.h"
@@ -396,11 +397,26 @@ int ff_h2645_sei_message_decode(H2645SEI *h, enum SEIType type,
                                 enum AVCodecID codec_id, GetBitContext *gb,
                                 GetByteContext *gbyte, void *logctx)
 {
+    int ret;
     switch (type) {
     case SEI_TYPE_USER_DATA_REGISTERED_ITU_T_T35:
         return decode_registered_user_data(h, gbyte, codec_id, logctx);
     case SEI_TYPE_USER_DATA_UNREGISTERED:
-        return decode_unregistered_user_data(&h->unregistered, gbyte, codec_id);
+    case SEI_TYPE_USER_DATA_CUSTOMIZED:
+        ret = decode_unregistered_user_data(&h->unregistered, gbyte, codec_id);
+        if (!ret) {
+            if (IS_H264(codec_id)) {
+                AVBufferRef *buf_ref = h->unregistered.buf_ref[h->unregistered.nb_buf_ref - 1];
+                char uuid_str[2 * AV_UUID_LEN + 4 + 1];
+                av_uuid_unparse(buf_ref->data, uuid_str);
+                av_log(logctx, AV_LOG_INFO, "SEI(%d) %s-%s\n",
+                    type, uuid_str, buf_ref->data + AV_UUID_LEN);
+            } else {
+                av_log(logctx, AV_LOG_INFO, "SEI(%d) %s\n",
+                type, h->unregistered.buf_ref[h->unregistered.nb_buf_ref - 1]->data);
+            }
+        }
+        return ret;
     case SEI_TYPE_DISPLAY_ORIENTATION:
         return decode_display_orientation(&h->display_orientation, gb);
     case SEI_TYPE_FILM_GRAIN_CHARACTERISTICS:

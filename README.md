@@ -1,3 +1,10 @@
+About
+=============
+The RTMP protocol extensions for H.265/HEVC was introduced by [金山视频云](https://github.com/ksvc/FFmpeg) and is now widely adopted in China.
+
+This repo ports the patch to the latest FFmpeg release 6.0, on branch `experiment`.
+
+
 FFmpeg README
 =============
 
